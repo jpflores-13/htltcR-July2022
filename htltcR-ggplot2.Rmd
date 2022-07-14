@@ -1,0 +1,206 @@
+---
+title: "htltcR-ggplot2"
+author: "JP Flores"
+date: '2022-06-21'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In today's session, we will be learning about the `ggplot2` package and its capabilities. If you have any questions about any functions, don't forget you can put a `?` in front of any function in the console to learn more about it.
+
+Here are some helpful links:
+[R for Data Science](https://r4ds.had.co.nz/data-visualisation.html)
+
+[ggplot2 reference manual](https://ggplot2.tidyverse.org/reference/)
+
+[Thomas Lin Pederson's 2-hour ggplot2 workshop](https://www.youtube.com/watch?v=h29g21z0a68&t=4406s)
+
+[Thomas Lin Pederson's 2-hour ggplot2 workshop (part 2)](https://www.youtube.com/watch?v=0m4yywqNPVY)
+
+Today's data will be from the TidyTuesday repository, and the first has to do with the diversity of public schools in the US (charter, private, and virtual school data were inaccessible).
+
+
+```{r package set-up, echo=FALSE}
+# install.packages("tidytuesdayR")
+library(tidytuesdayR)
+library(tidyverse)
+
+data <- tt_load("2019-09-24")
+
+## Running this next line will populate your viewer with more information on the dataset. Take some time to scroll through it!
+## The  metric for their definition of "diversity" is addressed as well as other pertinent information
+
+data
+```
+
+```{r dataset #1 set-up}
+
+## Let's see what we're working with... first let's pull the actual dataset from our TidyTuesday object and then run a view() function
+data <- data$school_diversity
+view(data)
+
+## For today's session, let's just do some quick data manipulation so we are just working on schools in North Carolina
+
+nc_schools <- 
+  data |> # the `|>` is called a pipe. It can also be typed like this: `%>%`
+  filter(ST == "NC") 
+
+## these names don't make sense so let's clean and change some column names. Let's also get rid of the first column.
+# install.packages("janitor")
+library(janitor)
+nc_schools <- 
+  nc_schools |>
+  clean_names() |> 
+  select(-leaid) |> 
+  rename(school_district = lea_name, school_type = d_locale_txt)
+
+view(nc_schools)
+
+## how many school districts are we working with?
+nrow(nc_schools)
+
+## how much information (in the form of columns) do we have for each school district?
+ncol(nc_schools)
+
+```
+
+Now that we know have a "clean" dataset and have an idea of what we're working with, let's try making some data visualizations!
+
+```{r visualization}
+
+## The function ggplot() is used to build plots from data. By calling ggplot alone we build a totally empty plot.
+
+ggplot()
+
+## We tell ggplot to use a dataset by giving it a data.frame to the data argument.
+
+ggplot(data = nc_schools)
+
+## Lets make a bar plot with the "diversity" of schools on the x-axis and count on the y-axis.
+
+## To do this we have to map the data onto the plot. To do this, we make an aesthetic (with aes()). aesthetics ## are parts of the plot that are determined by the data. Here we say that we want to plot the "diversity" on ## the x-axis, and count (default) on the y-axis.
+
+## This creates a plotting area that is informed by the data in `nc_schools`.
+
+ggplot(data = nc_schools, mapping = aes(x = diverse))
+
+## Let's start with something simple... a bar plot! When creating a bar plot, it's important to remember that you're plotting categorical data.
+
+ggplot(data = nc_schools, mapping = aes(x = diverse)) + # note how there is no y variable here
+  geom_bar() 
+
+## A reasoning behind why there is no y variable and yet it can still plot is because of the "grammar of graphics" (which is what the gg in ggplot stands for).
+
+```
+
+
+**CONGRATS!** YOU CREATED SOMETHING! There's a lot to unpack here... the `ggplot()` function needs a couple of things. It needs a `data` argument, a `mapping` argument, and in this case, we added a `geom()` argument. You don't necessarily need to specify these. For example, when I create ggplots, I use the following syntax:
+
+```{r coding best practice}
+nc_schools |>  ggplot(aes(x = diverse)) +
+  geom_bar()
+```
+
+We created the same plot but with less keystrokes. Ideal for a bioinformatician/computational biologist! How can we customize this simple plot? 
+
+
+```{r custom ggplot plot (bar)}
+nc_schools |> 
+  ggplot(aes(x = fct_infreq(diverse))) + # the `fct_infreq()` function puts the bars in order from highest frequency to lowest
+  geom_bar(fill = "dodgerblue") + # this changes the color of your bars 
+  labs(title = "How diverse are the school districts in North Carolina?", # the `labs()` function is for labels
+       x = "", # this line omits the x-axis label
+       y = "# of school districts")
+```
+
+
+
+Now that we have some more basics down, let's try different visualizations with more datasets. Remember that the type of data that you're plotting _matters_! If you're plotting categorical data, a bar plot may be the best choice. If you're plottign two numerical values, a scatter plot might be the way to go. If you're plotting categorical vs. numerical data, maybe plot a boxplot. 
+
+
+```{r scatter plot & trendline}
+## Load in the data using the tidytuesdayR package
+tt <- tt_load("2020-03-10")
+tt
+
+## this dataset has A LOT of different datasets in it... let's pull just one out using `$` to subset.
+salary_potential <- tt$salary_potential |> 
+  clean_names()
+view(salary_potential)
+
+## If you want to see arrange a certain column (ie.stem_percent), you can use the following code. There's a lot of things to consider here... how big is the school? Where is the school? etc.
+salary_potential |> 
+  arrange(desc(stem_percent))
+
+## let's try and create a scatter plot and fit a line to it.
+salary_potential |> 
+  ggplot(aes(y = stem_percent, x = make_world_better_percent)) +
+  geom_point() +
+  geom_smooth()
+
+## Notice how ggplot uses some type of layering system (the points are behind the line)
+## when you switch the two functions, the points are now on top!
+
+salary_potential |> 
+  ggplot(aes(y = stem_percent, x = make_world_better_percent)) +
+  geom_smooth() +
+  geom_point()
+
+```
+
+
+Based off these quick little visualization, it looks like schools with 50-95% of student body in STEM have about 45-70% of their alumni thinking they're making the world a better place. 
+
+Now, let's try one more example! I'm going to load this dataset a slightly different way...
+
+```{r}
+## Load data
+combined_data <- read_csv("https://raw.githubusercontent.com/5harad/openpolicing/master/results/data_for_figures/combined_data.csv")
+
+combined_data
+
+```
+
+
+This data is from the TidyTuesday repo and is called ["The Stanford Open Policing Project"](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-03-19)
+
+```{r}
+## exploring the data 
+
+policing <- combined_data # assign to more intuitive name
+
+policing
+
+glimpse(policing) #take a `glimpse` at the data
+
+policing |> 
+  distinct(driver_race) #the `distinct()` function pulls the distinct variables from a column
+
+## Let's create boxplots with the categorical data being the driver's race and the numerical data (arrest rate %)
+
+policing |> 
+  ggplot(aes(x = driver_race, y = arrest_rate)) + 
+  geom_boxplot() + # create a boxplot
+  xlab("Driver's Race") +
+  ylab("Arrest Rate (%)") + # different way to label axes 
+  ggtitle("Arrests rates (%) by driver's race")
+  
+policing |> 
+  ggplot(aes(x = driver_race, y = search_rate)) + 
+  geom_boxplot() + # create a boxplot
+  xlab("Driver's Race") +
+  ylab("Search Rate (%)") + # different way to label axes 
+  ggtitle("Search rates (%) by driver's race")
+  
+  
+```
+
+
+
+
+
+
+
